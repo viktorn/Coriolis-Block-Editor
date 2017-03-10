@@ -1,3 +1,6 @@
+Használati útmutató
+
+
 Irányítás:
 A/D: balra/jobbra mozgás
 W/Space: felfele ugrás
@@ -17,6 +20,7 @@ P: mentés
 O: betöltés
 
 Unity bûvészkedés:
+Game maximalizálása: Shift+Space
 Pálya véglegesítése: Level Root kimásolása (Ctrl+C) a futó játékból, beillesztése (Ctrl+V) a leállított játékba. Bizonytalanság esetén elõtte érdemes menteni a pályát (P).
 Kamera inerciába helyezése: a Hierarchy-ban a Background GameObjectben lévõ Inertial Camera bekapcsolása (Inspector bal felsõ pipája), és a Player (kapszula) Main Camerájának kikapcsolása.
 Ugrás/séta sebességének változtatása: a Player Crude Controller komponensében (Inspector ablak).

@@ -7,9 +7,13 @@ public class CrudeController : MonoBehaviour
     public float jumpSpeed = 8;
 
     private Rigidbody2D rb;
+    private LineRenderer velociLine;
+
     private Camera cam;
     private float zoomMultiplier = 1.3f;
-    private LineRenderer velociLine;
+    private bool following = true;
+
+    private GroundDetector groundDetector;
     private bool isGrounded;
 
     public bool intertiaTrace = true;
@@ -18,13 +22,11 @@ public class CrudeController : MonoBehaviour
 
     void Start()
     {
-        rb = GetComponent<Rigidbody2D>();
-        velociLine = GetComponent<LineRenderer>();
-        foreach (Transform child in transform)
-        {
-            if (child.gameObject.GetComponent<Camera>() != null)
-                cam = child.gameObject.GetComponent<Camera>();
-        }
+        rb = GetComponentInChildren<Rigidbody2D>();
+        groundDetector = GetComponentInChildren<GroundDetector>();
+        //cam = GetComponentInChildren<Camera>();
+        cam = GameObject.Find("Main Camera").GetComponent<Camera>();
+        velociLine = GetComponentInChildren<LineRenderer>();
 
         background = GameObject.Find("Background").transform;
         tracer = Resources.Load("Tracer", typeof(GameObject));
@@ -32,30 +34,30 @@ public class CrudeController : MonoBehaviour
 
     void Update()
     {
-        transform.rotation = Quaternion.AngleAxis(Mathf.Atan2(transform.position.x, -transform.position.y) * Mathf.Rad2Deg, Vector3.forward);
+        //if (isGrounded)
+        {
+            rb.rotation = Mathf.Atan2(rb.position.x, -rb.position.y) * Mathf.Rad2Deg;
+            if (following) cam.transform.rotation = rb.transform.rotation;
+        }
     }
 
     void LateUpdate()
     {
+        // Zoom
         float zoomDelta = Input.GetAxis("Mouse ScrollWheel");
         if (zoomDelta != 0f)
         {
             cam.orthographicSize *= Mathf.Pow(zoomMultiplier, -Input.GetAxis("Mouse ScrollWheel"));
-            Vector3 camPos = cam.transform.localPosition;
-            camPos.y = 0.3f * cam.orthographicSize;
-            cam.transform.localPosition = camPos;
+            //Vector3 camPos = cam.transform.localPosition;
+            //camPos.y = 0.3f * cam.orthographicSize;
+            //cam.transform.localPosition = camPos;
         }
+        if (following) cam.transform.localPosition = new Vector3(rb.position.x, /*0.3f * cam.orthographicSize +*/ rb.position.y, cam.transform.localPosition.z) + transform.up * 0.3f * cam.orthographicSize;
 
+        // Kamera követés ki/be
         if (Input.GetMouseButtonDown(2))
         {
-            if (cam.gameObject.transform.parent == null)
-            {
-                cam.gameObject.transform.parent = transform;
-                cam.transform.localRotation = new Quaternion();
-                cam.transform.localPosition = new Vector3(0, 0.3f * cam.orthographicSize, cam.transform.localPosition.z);
-            }
-            else
-                cam.gameObject.transform.parent = null;
+            following = !following;
         }
 
         velociLine.SetPosition(0, (Vector3)rb.position + Vector3.back);
@@ -64,7 +66,7 @@ public class CrudeController : MonoBehaviour
 
     void FixedUpdate()
     {
-        isGrounded = CheckGrounded();
+        isGrounded = groundDetector.grounded;
 
         if (Input.GetKey(KeyCode.S))
             rb.velocity = -rb.transform.up * Mathf.Abs(Vector2.Dot(rb.velocity, rb.transform.up));
@@ -105,46 +107,17 @@ public class CrudeController : MonoBehaviour
             }
         }
 
-        transform.rotation = Quaternion.AngleAxis(Mathf.Atan2(transform.position.x, -transform.position.y) * Mathf.Rad2Deg, Vector3.forward);
-        
+        //if (isGrounded)
+            rb.rotation = Mathf.Atan2(rb.position.x, -rb.position.y) * Mathf.Rad2Deg;
+
         if (!isGrounded && intertiaTrace)
-            Instantiate(tracer, transform.position, transform.rotation, background);
+            Instantiate(tracer, rb.position, rb.transform.rotation, background);
     }
 
-    //void OnCollisionEnter2D(Collision2D collision)
-    //{
-    //    //isGrounded = false;
-    //    foreach (ContactPoint2D contact in collision.contacts)
-    //    {
-    //        if (Vector2.Dot(transform.up, contact.normal) > 0)
-    //        {
-    //            //isGrounded = true;
-    //            groundedCount++;
-    //            Debug.Log(groundedCount + " " + Time.frameCount);
-    //            //return;
-    //        }
-    //    }
-    //}
-
-    //void OnCollisionExit2D(Collision2D collision)
-    //{
-    //    //isGrounded = false;
-    //    foreach (ContactPoint2D contact in collision.contacts)
-    //    {
-    //        if (Vector2.Dot(transform.up, contact.normal) > 0)
-    //        {
-    //            //isGrounded = true;
-    //            groundedCount--;
-    //            Debug.Log(groundedCount + " " + Time.frameCount);
-    //            //return;
-    //        }
-    //    }
-    //}
-
-
-    bool CheckGrounded()
+    void OnGUI()
     {
-        RaycastHit2D[] hits = Physics2D.CapsuleCastAll(transform.position, new Vector2(1, 2), CapsuleDirection2D.Vertical, transform.rotation.eulerAngles.z, -transform.up, 0.1f, LayerMask.GetMask("Default"));
-        return (hits.Length > 0);
+        Vector3 textPos = cam.WorldToScreenPoint(rb.position);
+        textPos.y = cam.pixelHeight - textPos.y;
+        GUI.Label(new Rect(textPos, new Vector2(100, 30)), ((Vector2)transform.InverseTransformDirection(rb.velocity)).ToString());
     }
 }
